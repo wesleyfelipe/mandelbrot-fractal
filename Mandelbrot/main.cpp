@@ -1,6 +1,10 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 
+#define HAVE_STRUCT_TIMESPEC
+#include <pthread.h>
+
+
 const int IMAGE_WIDTH = 1000;
 const int IMAGE_HEIGHT = 600;
 double zoom = 0.004; // allow the user to zoom in and out...
@@ -11,17 +15,19 @@ const int MAX = 127; // maximum number of iterations for mandelbrot()
 
 int mandelbrot(double, double, int);
 sf::Color getColor(int);
+void gerarImagem(sf::RenderWindow *window);
+
+sf::Image image;
+sf::Texture texture;
+sf::Sprite sprite;
+
+bool stateChanged = true; // track whether the image needs to be regenerated
 
 int main() {
 	sf::RenderWindow window(sf::VideoMode(IMAGE_WIDTH, IMAGE_HEIGHT), "Mandelbrot");
 	window.setFramerateLimit(30);
 
-	sf::Image image;
 	image.create(IMAGE_WIDTH, IMAGE_HEIGHT, sf::Color(0, 0, 0));
-	sf::Texture texture;
-	sf::Sprite sprite;
-
-	bool stateChanged = true; // track whether the image needs to be regenerated
 
 	while (window.isOpen()) {
 		sf::Event event;
@@ -62,27 +68,31 @@ int main() {
 		}
 
 		if (stateChanged) { // only generate a new image if something has changed, to avoid unnecessary lag
-			for (int x = 0; x < IMAGE_WIDTH; x++) {
-				for (int y = 0; y < IMAGE_HEIGHT; y++) {
-					// convert x and y to the appropriate complex number
-					double real = (x - IMAGE_WIDTH / 2.0) * zoom + offsetX;
-					double imag = (y - IMAGE_HEIGHT / 2.0) * zoom + offsetY;
-					int value = mandelbrot(real, imag, MAX);
-					image.setPixel(x, y, getColor(value));
-				}
-			}
-			texture.loadFromImage(image);
-			sprite.setTexture(texture);
+			gerarImagem(&window);
 		}
-
-		window.clear();
-		window.draw(sprite);
-		window.display();
 
 		stateChanged = false;
 	}
 
 	return 0;
+}
+
+void gerarImagem(sf::RenderWindow *window) {
+	for (int x = 0; x < IMAGE_WIDTH; x++) {
+		for (int y = 0; y < IMAGE_HEIGHT; y++) {
+			// convert x and y to the appropriate complex number
+			double real = (x - IMAGE_WIDTH / 2.0) * zoom + offsetX;
+			double imag = (y - IMAGE_HEIGHT / 2.0) * zoom + offsetY;
+			int value = mandelbrot(real, imag, MAX);
+			image.setPixel(x, y, getColor(value));
+		}
+	}
+	texture.loadFromImage(image);
+	sprite.setTexture(texture);
+
+	window->clear();
+	window->draw(sprite);
+	window->display();
 }
 
 int mandelbrot(double startReal, double startImag, int maximum) {

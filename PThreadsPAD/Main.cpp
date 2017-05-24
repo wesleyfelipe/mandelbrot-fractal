@@ -91,7 +91,6 @@ int main() {
 		}
 
 		if (alteraImagem) {
-			printf("Atualizar imagem.\n");
 			atualizaImagem();
 			alteraImagem = false;
 		}
@@ -108,9 +107,8 @@ void refresh() {
 }
 
 void atualizaImagem() {
-	printf("Lock mutex: caculaar total tasks\n");
-	printf("Calcular tasks\n");
 	tasks = (IMAGE_WIDTH * IMAGE_HEIGHT) / (ladoXFatia * ladoYFatia);
+	tasksTela = tasks;
 
 	pthread_t *threads = new pthread_t[qtdThreadsFractal];
 
@@ -121,10 +119,9 @@ void atualizaImagem() {
 	}
 
 	while (true) {
-		printf("Faltam %d tarefas\n", tasks);
 		pthread_cond_wait(&condRender, &mutexTasks);
 		refresh();
-		if (tasks < 0) {
+		if (tasksTela < 0) {
 			return;
 		}
 	}
@@ -150,6 +147,7 @@ void *atualizarFatiaImagemThread(void *arg) {
 		int inicioX = task - (ladox * inicioY);
 
 		atualizarFatiaImagem(inicioX, inicioY);
+		tasksTela = tasksTela - 1;
 		pthread_cond_signal(&condRender);
 	}
 
